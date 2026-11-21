@@ -29,6 +29,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 nav a { color: var(--muted); text-decoration: none; font-weight: 600; }
 nav a:hover { color: var(--text); }
 .spacer { flex: 1; }
+.channel[hidden] { display: none; }
 .channel { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
 .channel button { border: 0; background: transparent; padding: 5px 14px; color: var(--muted); font-weight: 600; }
 .channel button.active[data-channel="prod"] { background: var(--live); color: #0e1a12; }

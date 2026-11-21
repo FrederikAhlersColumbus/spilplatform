@@ -31,7 +31,23 @@ let catalog: Catalog = { updated: null, games: [] };
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("da-DK", { day: "numeric", month: "long", year: "numeric" });
 
+/**
+ * Developer mode shows the Live/Dev switch. Visitors only ever see Live. Turn it on with ?dev in
+ * the address (remembered in this browser) and off again with ?dev=0.
+ */
+const DEV_KEY = "platform.devmode";
+const devMode = (() => {
+  const q = new URLSearchParams(location.search).get("dev");
+  try {
+    if (q !== null) localStorage.setItem(DEV_KEY, q === "0" ? "0" : "1");
+    return localStorage.getItem(DEV_KEY) === "1";
+  } catch {
+    return q !== null && q !== "0";
+  }
+})();
+
 function getChannel(): Channel {
+  if (!devMode) return "prod";
   try {
     return localStorage.getItem(CHANNEL_KEY) === "dev" ? "dev" : "prod";
   } catch {
@@ -52,6 +68,7 @@ function setChannel(c: Channel) {
 const CHANNEL_NAME: Record<Channel, string> = { prod: "Live", dev: "Dev" };
 
 function channelBadge(c: Channel) {
+  if (!devMode) return ""; // visitors only see Live, so there is nothing to label
   return `<span class="badge ${c}">${CHANNEL_NAME[c]}</span>`;
 }
 
@@ -94,9 +111,9 @@ function gamePage(g: Game) {
         <p class="desc">${esc(g.description)}</p>
         ${v
           ? `<a class="play" href="#/spil/${g.slug}/spil">▶ Spil nu</a>
-             <p class="muted">Version ${esc(v)} ${channelBadge(ch)}${g.channels[other] && g.channels[other] !== v ? ` · ${CHANNEL_NAME[other]}: ${esc(g.channels[other]!)}` : ""}</p>`
-          : `<p class="soon-note">Ikke udgivet på ${CHANNEL_NAME[ch]} endnu.${g.channels[other] ? ` Skift til ${CHANNEL_NAME[other]} for at spille version ${esc(g.channels[other]!)}.` : ""}</p>`}
-        <p class="muted small">Dit spil gemmes i browseren. ${CHANNEL_NAME.prod} og ${CHANNEL_NAME.dev} har hver deres gemte spil.</p>
+             <p class="muted">Version ${esc(v)}${devMode ? ` ${channelBadge(ch)}${g.channels[other] && g.channels[other] !== v ? ` · ${CHANNEL_NAME[other]}: ${esc(g.channels[other]!)}` : ""}` : ""}</p>`
+          : `<p class="soon-note">${devMode ? `Ikke udgivet på ${CHANNEL_NAME[ch]} endnu.${g.channels[other] ? ` Skift til ${CHANNEL_NAME[other]} for at spille version ${esc(g.channels[other]!)}.` : ""}` : "Kommer snart."}</p>`}
+        <p class="muted small">Dit spil gemmes i browseren.${devMode ? ` ${CHANNEL_NAME.prod} og ${CHANNEL_NAME.dev} har hver deres gemte spil.` : ""}</p>
       </div>
     </section>`;
 }
@@ -140,6 +157,7 @@ function route() {
 
 async function start() {
   document.querySelectorAll<HTMLButtonElement>("[data-channel]").forEach((b) => (b.onclick = () => setChannel(b.dataset.channel as Channel)));
+  (document.querySelector(".channel") as HTMLElement).hidden = !devMode;
   try {
     const res = await fetch("catalog.json", { cache: "no-cache" });
     catalog = await res.json();
@@ -152,6 +170,13 @@ async function start() {
     document.title = catalog.platform.title;
   }
   window.addEventListener("hashchange", route);
+  // A game asks to go back to the menu (its own "Tilbage til menu"): show the game's page again.
+  window.addEventListener("message", (e) => {
+    const frame = document.getElementById("game-frame") as HTMLIFrameElement | null;
+    if (!frame || e.source !== frame.contentWindow || e.data?.type !== "spilplatform:exit") return;
+    const slug = location.hash.replace(/^#\/?/, "").split("/")[1];
+    location.hash = slug ? `#/spil/${slug}` : "#/";
+  });
   setChannel(getChannel());
 }
 
