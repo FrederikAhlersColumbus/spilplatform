@@ -58,14 +58,17 @@ skriver resultatet i `ledger.json` på grenen **`data`** – den eneste kilde, p
   kontoen står i **`voters.json`**, er mindst 30 dage gammel, spillet findes og ikke er ens eget. Stemmen gemmes,
   som den var ved oprettelsen; issuet lukkes og låses. Rettelser bagefter tæller ikke. Den nyeste stemme pr.
   person pr. spil gælder.
-- **Tilføj dit spil** (formularen `nyt-spil.yml`): kommer først på siden, når **du** (admin) giver issuet labelen
-  `godkendt` – teksten på det tidspunkt gemmes. Andre, der sætter labelen, får den fjernet. Fjern labelen for at
-  trække spillet tilbage. Spillet kører i en sandkasse-ramme og kan ikke styre spilsiden.
+- **Tilføj dit spil** (formularen `nyt-spil.yml`): fra en kollega på `voters.json` kommer det **straks** på siden
+  (teksten ved oprettelsen gemmes, issuet låses). Fra andre venter det, til **du** (admin) sætter labelen `godkendt`.
+  Labelen `afvist` tager et spil af siden. Andre, der sætter labelerne, får dem fjernet. Dommeren nævner dig
+  (`@ejeren`) i issuet, så GitHub sender dig en mail. Spillet kører i en sandkasse-ramme.
+- **Kommentarer** pr. spil: giscus (GitHub Discussions, kategorien Announcements). Man skriver som den GitHub-bruger,
+  man er logget ind som. Kommentarer giver ingen point. Moderér under Discussions (slet, lås).
 - **Topliste** (`#/topliste`): flest point (summen af stjerner på ens spil), bedste spil (gennemsnit, mindst 3
   stemmer), flest spil. Alle stemmer står åbent på spillets side med link til issuet.
 - Egne spil får `developer` og `type` i `games.config.json`; de opdateres i kataloget ved hver `deploy`.
 
-Labels der skal findes i repoet: `bedømmelse`, `nyt-spil`, `godkendt`.
+Labels der skal findes i repoet: `bedømmelse`, `nyt-spil`, `godkendt`, `afvist`.
 
 ### Sikkerhed – det skal holdes
 - **Giv aldrig kolleger skriveadgang til repoet.** Så kan kun du og dommeren skrive `main`, `data` og labels.

@@ -1,5 +1,5 @@
 name: Tilføj dit spil
-description: Indsend et spil til konkurrencen. Det kommer på spilsiden, når det er godkendt.
+description: Indsend et spil til konkurrencen. Står du på kollegalisten, kommer det på spilsiden med det samme.
 title: "Nyt spil: "
 labels: ["nyt-spil"]
 body:

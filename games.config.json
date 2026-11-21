@@ -2,7 +2,12 @@
   "platform": {
     "title": "Spilplatform",
     "tagline": "Hvem laver det sjoveste spil?",
-    "repo": "FrederikAhlersColumbus/spilplatform"
+    "repo": "FrederikAhlersColumbus/spilplatform",
+    "giscus": {
+      "repoId": "R_kgDOV2405Q",
+      "category": "Announcements",
+      "categoryId": ""
+    }
   },
   "games": {
     "bondegaarden": {

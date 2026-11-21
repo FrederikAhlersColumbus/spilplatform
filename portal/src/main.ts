@@ -33,7 +33,7 @@ interface Game {
 }
 interface Catalog {
   updated: string | null;
-  platform?: { title: string; tagline: string; repo?: string };
+  platform?: { title: string; tagline: string; repo?: string; giscus?: { repoId: string; category: string; categoryId: string } };
   games: Game[];
 }
 
@@ -214,7 +214,34 @@ function gamePage(g: Game) {
         <p class="muted small">Dit spil gemmes i browseren.${devMode && !g.url ? ` ${CHANNEL_NAME.prod} og ${CHANNEL_NAME.dev} har hver deres gemte spil.` : ""}</p>
       </div>
     </section>
-    ${reviewsHtml(sc)}`;
+    ${reviewsHtml(sc)}
+    <section class="discussion"><h2>Kommentarer</h2><div id="giscus"></div></section>`;
+  mountComments(g);
+}
+
+/**
+ * The game's comment thread: giscus shows a GitHub Discussion for the game (one per game, made on the first
+ * comment) and lets people write as the GitHub user they are logged in as. Comments give no points.
+ */
+function mountComments(g: Game) {
+  const box = document.getElementById("giscus")!;
+  const cfg = catalog.platform?.giscus;
+  const repo = catalog.platform?.repo;
+  if (!repo || !cfg?.repoId || !cfg.categoryId) {
+    box.innerHTML = `<p class="muted">Kommentarsporet bliver slået til snart.</p>`;
+    return;
+  }
+  const s = document.createElement("script");
+  s.src = "https://giscus.app/client.js";
+  s.async = true;
+  s.crossOrigin = "anonymous";
+  const attrs: Record<string, string> = {
+    repo, "repo-id": cfg.repoId, category: cfg.category, "category-id": cfg.categoryId,
+    mapping: "specific", term: `Kommentarer: ${g.slug}`, strict: "1", "reactions-enabled": "1",
+    "emit-metadata": "0", "input-position": "top", theme: "dark_dimmed", lang: "da", loading: "lazy",
+  };
+  for (const [k, v] of Object.entries(attrs)) s.setAttribute(`data-${k}`, v);
+  box.append(s);
 }
 
 /** What people wrote, newest first (their own words, as written – escaped) – and, open for all to see, who gave what. */

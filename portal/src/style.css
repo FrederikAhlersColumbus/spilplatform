@@ -140,3 +140,5 @@ nav a.on { color: var(--text); }
 .voters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
 .voters a { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); text-decoration: none; }
 .voters a span { color: var(--accent); }
+.discussion { margin-top: 36px; max-width: 760px; }
+.discussion h2 { font-size: 20px; }
