@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-21T18:26:23.931Z",
+  "updated": "2026-11-21T20:22:13.846Z",
   "games": [
     {
       "slug": "bondegaarden",
@@ -82,7 +82,12 @@
         "Simulation",
         "Landbrug",
         "Strategi"
-      ]
+      ],
+      "developer": {
+        "name": "Frederik Ahlers",
+        "github": "FrederikAhlersColumbus"
+      },
+      "type": "Simulation"
     },
     {
       "slug": "kolonien",
@@ -220,11 +225,22 @@
         "Strategi",
         "Turbaseret",
         "Historie"
-      ]
+      ],
+      "developer": {
+        "name": "Frederik Ahlers",
+        "github": "FrederikAhlersColumbus"
+      },
+      "type": "Strategi"
     }
   ],
   "platform": {
     "title": "Spilplatform",
-    "tagline": "Mine spil – direkte i browseren"
+    "tagline": "Hvem laver det sjoveste spil?",
+    "repo": "FrederikAhlersColumbus/spilplatform",
+    "giscus": {
+      "repoId": "R_kgDOV2405Q",
+      "category": "Announcements",
+      "categoryId": "DIC_kwDOV2405c4DLq60"
+    }
   }
 }
