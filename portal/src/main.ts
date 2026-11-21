@@ -177,7 +177,7 @@ function catalogPage() {
       </select></label>
     </section>
     <section class="grid">${cards.join("") || `<p class="empty">Ingen spil passer til filtret.</p>`}
-      ${repo ? `<a class="card add" href="${esc(submitUrl(repo))}" target="_blank" rel="noopener"><div class="add-body"><span>＋</span><b>Tilføj dit spil</b><p>Indsend det på GitHub – så er du med i konkurrencen.</p></div></a>` : ""}
+      ${repo ? `<a class="card add" href="#/guide"><div class="add-body"><span>＋</span><b>Tilføj dit spil</b><p>Indsend det på GitHub – så er du med i konkurrencen.</p></div></a>` : ""}
     </section>`;
   app.querySelectorAll<HTMLButtonElement>("[data-type]").forEach((b) => (b.onclick = () => ((view.type = b.dataset.type!), catalogPage())));
   app.querySelector<HTMLSelectElement>("[data-dev]")!.onchange = (e) => ((view.dev = (e.target as HTMLSelectElement).value), catalogPage());
@@ -324,6 +324,59 @@ function notFound() {
   app.innerHTML = `<section class="hero"><h1>Ikke fundet</h1><p><a href="#/">Tilbage til biblioteket</a></p></section>`;
 }
 
+function guidePage() {
+  const repo = catalog.platform?.repo;
+  const form = repo ? submitUrl(repo) : "";
+  app.innerHTML = `
+    <section class="hero"><h1>Sådan tilføjer du dit spil</h1>
+      <p>Dit spil kommer på spilsiden med det samme og er med i konkurrencen om flest point. Det tager 5 minutter, når spillet ligger online.</p></section>
+    <section class="guide">
+      <div class="step"><span class="n">1</span><div><h2>Det skal du have</h2>
+        <ul>
+          <li><b>En GitHub-konto, der er mindst 30 dage gammel.</b> Indsendelsen sker som et issue på GitHub, så toplisten ved, hvem der har lavet spillet.</li>
+          <li><b>Et spil, der kører i browseren</b> – HTML/JavaScript, fx lavet med Claude. Ingen installation, intet login.</li>
+          <li><b>En offentlig adresse, der starter med <code>https://</code>.</b> Spillet ligger hos dig, ikke på spilsiden.</li>
+        </ul></div></div>
+      <div class="step"><span class="n">2</span><div><h2>Læg spillet online</h2>
+        <p>Har du ikke et sted? GitHub Pages er gratis:</p>
+        <ol>
+          <li>Lav et <b>offentligt</b> repository på GitHub og læg spillets filer i det (<code>index.html</code> i roden).</li>
+          <li>Gå til <b>Settings → Pages</b>, vælg grenen <code>main</code> og mappen <code>/ (root)</code>, og gem.</li>
+          <li>Efter et minut ligger spillet på <code>https://dit-brugernavn.github.io/repo-navn/</code>.</li>
+        </ol>
+        <p class="muted">Netlify, Vercel og lignende virker også. Brug relative stier (<code>./spil.js</code>, ikke <code>/spil.js</code>), så filerne findes under undermappen.</p></div></div>
+      <div class="step"><span class="n">3</span><div><h2>Tjek, at det kan spilles herinde</h2>
+        <p>Spilsiden viser dit spil i en ramme (en <i>iframe</i>) i en sandkasse. Det betyder:</p>
+        <ul>
+          <li>Siden må <b>ikke</b> nægte at blive vist i en ramme (<code>X-Frame-Options</code> eller <code>frame-ancestors</code>). GitHub Pages er i orden.</li>
+          <li>Scripts, gemte spil (<code>localStorage</code>), lyd, fuld skærm, musefangst, formularer og popup-vinduer virker.</li>
+          <li>Downloads og at skifte hele browserfanen til en anden side virker ikke.</li>
+          <li>Spillet skal kunne starte uden login og fylde vinduet – det får hele skærmen under menulinjen.</li>
+        </ul>
+        <p class="muted">Valgfrit: en "Tilbage til menu"-knap kan sende <code>window.parent.postMessage({ type: "spilplatform:exit" }, "*")</code>, så kommer spilleren tilbage til spillets side.</p></div></div>
+      <div class="step"><span class="n">4</span><div><h2>Udfyld formularen</h2>
+        <table class="fields">
+          <tr><td>Titel</td><td>Spillets navn, højst 60 tegn.</td></tr>
+          <tr><td>Udvikler</td><td>Dit navn, som det skal stå på toplisten. Point går til din GitHub-konto.</td></tr>
+          <tr><td>Adresse</td><td>Spillets <code>https://</code>-adresse fra trin 2.</td></tr>
+          <tr><td>Type</td><td>Strategi, Simulation, Action, Arkade, Puslespil, Eventyr, Sport eller Andet – bruges til filtrene.</td></tr>
+          <tr><td>Kort beskrivelse</td><td>Én linje til kortet i biblioteket, højst 140 tegn.</td></tr>
+          <tr><td>Beskrivelse</td><td>Hvad går spillet ud på, og hvordan styrer man det? Højst 2000 tegn.</td></tr>
+          <tr><td>Coverbillede</td><td>Valgfrit: <code>https://</code>-adresse på et billede i 16:9, fx 1280×720. Læg det samme sted som spillet.</td></tr>
+        </table>
+        ${form ? `<p><a class="btn" href="${esc(form)}" target="_blank" rel="noopener">Åbn formularen på GitHub</a></p>` : ""}</div></div>
+      <div class="step"><span class="n">5</span><div><h2>Når du har trykket "Submit new issue"</h2>
+        <ul>
+          <li>Inden for et minut svarer dommeren i issuet med ✅, og spillet står i biblioteket. Svarer den ⚠️, mangler titel eller adresse – indsend igen.</li>
+          <li><b>Opdatér spillet ved at opdatere det på din adresse.</b> Spilsiden viser altid den nyeste version, og dine stemmer bliver.</li>
+          <li>Rettelser i issuet bagefter tæller ikke. Skal titel eller tekst ændres, så indsend et nyt issue – men så starter det forfra uden stemmer, så skriv til Frederik i stedet, hvis det bare er en tekst.</li>
+          <li>Frederik får besked om alle nye spil og kan tage et spil af siden.</li>
+        </ul></div></div>
+      <div class="step"><span class="n">★</span><div><h2>Konkurrencen</h2>
+        <p>Kolleger giver 1–5 stjerner med "★ Bedøm spillet" på spillets side. Man kan ikke bedømme sine egne spil, og kun den nyeste stemme pr. person tæller. Alle stemmer er offentlige. Se stillingen på <a href="#/topliste">toplisten</a>.</p></div></div>
+    </section>`;
+}
+
 // ---- Routing (hash based, so it works on GitHub Pages without server rules) -------------
 
 function route() {
@@ -337,6 +390,7 @@ function route() {
     return catalogPage();
   }
   if (parts[0] === "topliste") return leaderboardPage();
+  if (parts[0] === "guide") return guidePage();
   if (parts[0] === "spil" && parts[1]) {
     const g = games.find((x) => x.slug === parts[1]);
     if (!g) return notFound();
@@ -361,9 +415,7 @@ async function start() {
     document.title = catalog.platform.title;
   }
   const repo = catalog.platform?.repo;
-  const submit = document.getElementById("nav-submit") as HTMLAnchorElement;
-  if (repo) submit.href = submitUrl(repo);
-  else submit.hidden = true;
+  if (!repo) (document.getElementById("nav-submit") as HTMLAnchorElement).hidden = true;
   community = await loadCommunity(repo);
   games = [...catalog.games, ...community.games.map(fromCommunity)];
   computeScores();

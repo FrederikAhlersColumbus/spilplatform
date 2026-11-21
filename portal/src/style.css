@@ -142,3 +142,18 @@ nav a.on { color: var(--text); }
 .voters a span { color: var(--accent); }
 .discussion { margin-top: 36px; max-width: 760px; }
 .discussion h2 { font-size: 20px; }
+
+.guide { display: grid; gap: 16px; max-width: 860px; }
+.step { display: flex; gap: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+.step .n { flex: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--accent); color: #1a1405; font-weight: 800; }
+.step > div { min-width: 0; }
+.step h2 { margin: 4px 0 8px; font-size: 19px; }
+.step p, .step ul, .step ol { margin: 0 0 10px; }
+.step li { margin: 4px 0; }
+.step code { background: var(--bg-2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; font-size: 13px; overflow-wrap: anywhere; }
+.fields { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.fields td { padding: 7px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+.fields td:first-child { font-weight: 700; white-space: nowrap; width: 1%; padding-right: 14px; }
+.btn { display: inline-block; padding: 9px 16px; border-radius: 8px; background: var(--accent); color: #1a1405; font-weight: 700; text-decoration: none; }
+.btn:hover { filter: brightness(1.08); }
+@media (max-width: 560px) { .step { padding: 14px; gap: 12px; } .fields td:first-child { white-space: normal; } }

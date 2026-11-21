@@ -1,5 +1,5 @@
 name: Tilføj dit spil
-description: Indsend et spil til konkurrencen. Det kommer på spilsiden med det samme.
+description: Indsend et spil til konkurrencen. Det kommer på spilsiden med det samme. Guide - https://frederikahlerscolumbus.github.io/spilplatform/#/guide
 title: "Nyt spil: "
 labels: ["nyt-spil"]
 body:
