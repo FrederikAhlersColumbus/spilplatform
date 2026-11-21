@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-19T05:15:22.762Z",
+  "updated": "2026-11-21T18:26:23.931Z",
   "games": [
     {
       "slug": "bondegaarden",
@@ -87,10 +87,15 @@
     {
       "slug": "kolonien",
       "channels": {
-        "dev": "0.17.0",
-        "prod": "0.17.0"
+        "dev": "0.18.0",
+        "prod": "0.18.0"
       },
       "versions": [
+        {
+          "version": "0.18.0",
+          "date": "2026-11-21T18:26:18.053Z",
+          "notes": "Enhederne bærer deres nations flag; søslag med kaperskibe og fregatter; de andre magter bygger deres byer ud; popup når en kolonist er født; pænere overskrift i koloniskærmen"
+        },
         {
           "version": "0.17.0",
           "date": "2026-10-19T05:15:04.468Z",
