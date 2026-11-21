@@ -1,5 +1,8 @@
-// The platform portal: a catalog of games, a page per game, and a full-screen player.
-// It only reads catalog.json, which the publish/promote tools maintain.
+// The platform portal: a catalog of games, a page per game, a full-screen player – and the competition:
+// colleagues' games, ratings and the leaderboard. The published games come from catalog.json (kept by the
+// publish/promote tools); colleagues' games and all ratings come from the repository's GitHub issues.
+
+import { Community, CommunityGame, Rating, STARS, loadCommunity, rateUrl, submitUrl } from "./github";
 
 type Channel = "prod" | "dev";
 
@@ -8,6 +11,10 @@ interface Version {
   date: string;
   notes: string;
 }
+interface Developer {
+  name: string;
+  github?: string;
+}
 interface Game {
   slug: string;
   title: string;
@@ -15,18 +22,66 @@ interface Game {
   description: string;
   cover?: string;
   tags: string[];
+  type?: string;
+  developer?: Developer | null;
   channels: Record<Channel, string | null>;
   versions: Version[];
+  /** A colleague's game, played from its own address (no channels or versions here). */
+  url?: string;
+  issue?: string;
+  date?: string;
 }
 interface Catalog {
   updated: string | null;
-  platform?: { title: string; tagline: string };
+  platform?: { title: string; tagline: string; repo?: string };
   games: Game[];
 }
 
 const app = document.getElementById("app")!;
 const CHANNEL_KEY = "platform.channel";
 let catalog: Catalog = { updated: null, games: [] };
+let community: Community = { ratings: [], games: [] };
+/** Every game: the published ones and the colleagues' approved ones. */
+let games: Game[] = [];
+
+const fromCommunity = (c: CommunityGame): Game => ({
+  slug: c.slug, title: c.title, tagline: c.tagline, description: c.description, cover: c.cover, tags: [], type: c.type,
+  developer: c.developer, channels: { prod: "live", dev: "live" }, versions: [], url: c.url, issue: c.issue, date: c.date,
+});
+
+// ---- Scores ----------------------------------------------------------------------------------------------
+
+const devKey = (d?: Developer | null) => (d?.github || d?.name || "ukendt").toLowerCase();
+const devName = (d?: Developer | null) => d?.name || d?.github || "Ukendt";
+
+interface Score { votes: Rating[]; sum: number; avg: number }
+let scores = new Map<string, Score>();
+
+/** One vote per person per game – the newest – and never for your own game. */
+function computeScores() {
+  const owner = new Map(games.map((g) => [g.slug, (g.developer?.github ?? "").toLowerCase()]));
+  const latest = new Map<string, Rating>();
+  for (const r of [...community.ratings].sort((a, b) => a.date.localeCompare(b.date))) {
+    if (!owner.has(r.game) || owner.get(r.game) === r.user.toLowerCase()) continue;
+    latest.set(`${r.game}|${r.user.toLowerCase()}`, r);
+  }
+  scores = new Map();
+  for (const r of latest.values()) {
+    const s = scores.get(r.game) ?? { votes: [], sum: 0, avg: 0 };
+    s.votes.push(r);
+    s.sum += r.stars;
+    s.avg = s.sum / s.votes.length;
+    scores.set(r.game, s);
+  }
+}
+const scoreOf = (slug: string): Score => scores.get(slug) ?? { votes: [], sum: 0, avg: 0 };
+const MIN_VOTES = 3;
+
+function starsHtml(avg: number, n: number, small = false) {
+  if (!n) return `<span class="stars none${small ? " small" : ""}">Ingen bedømmelser endnu</span>`;
+  const full = Math.round(avg);
+  return `<span class="stars${small ? " small" : ""}" title="${avg.toFixed(1)} af ${STARS} – ${n} ${n === 1 ? "bedømmelse" : "bedømmelser"}">${"★".repeat(full)}<i>${"★".repeat(STARS - full)}</i> <b>${avg.toFixed(1)}</b> <span class="muted">(${n})</span></span>`;
+}
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("da-DK", { day: "numeric", month: "long", year: "numeric" });
@@ -74,30 +129,67 @@ function channelBadge(c: Channel) {
 
 // ---- Pages -----------------------------------------------------------------------------
 
+// What the library shows: a type, a developer, and the order.
+const view = { type: "", dev: "", sort: "best" as "best" | "votes" | "new" | "az" };
+
 function catalogPage() {
   const ch = getChannel();
-  const cards = catalog.games.map((g) => {
-    const v = g.channels[ch];
+  const types = [...new Set(games.map((g) => g.type || "Andet"))].sort();
+  const devs = [...new Map(games.map((g) => [devKey(g.developer), devName(g.developer)])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const shown = games
+    .filter((g) => (!view.type || (g.type || "Andet") === view.type) && (!view.dev || devKey(g.developer) === view.dev))
+    .sort((a, b) => {
+      const sa = scoreOf(a.slug), sb = scoreOf(b.slug);
+      if (view.sort === "az") return a.title.localeCompare(b.title, "da");
+      if (view.sort === "votes") return sb.votes.length - sa.votes.length || sb.avg - sa.avg;
+      if (view.sort === "new") return newest(b).localeCompare(newest(a));
+      return sb.avg - sa.avg || sb.votes.length - sa.votes.length;
+    });
+  const cards = shown.map((g) => {
+    const v = g.url ? "live" : g.channels[ch];
+    const sc = scoreOf(g.slug);
     return `<a class="card ${v ? "" : "soon"}" href="#/spil/${g.slug}">
-      <div class="cover">${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy">` : ""}</div>
+      <div class="cover">${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : `<span class="nocover">${esc(g.title.slice(0, 1))}</span>`}</div>
       <div class="card-body">
         <h3>${esc(g.title)}</h3>
+        <p class="by">af ${esc(devName(g.developer))}</p>
         <p>${esc(g.tagline)}</p>
-        <div class="meta">${g.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}
-          <span class="ver">${v ? `v${esc(v)}` : "Kommer snart"}</span></div>
+        ${starsHtml(sc.avg, sc.votes.length, true)}
+        <div class="meta"><span class="tag type">${esc(g.type || "Andet")}</span>${g.tags.filter((t) => t !== g.type).map((t) => `<span class="tag">${esc(t)}</span>`).join("")}
+          <span class="ver">${g.url ? "Kollega" : v ? `v${esc(v)}` : "Kommer snart"}</span></div>
       </div>
     </a>`;
   });
+  const repo = catalog.platform?.repo;
   app.innerHTML = `
     <section class="hero">
       <h1>${esc(catalog.platform?.tagline ?? "Bibliotek")}</h1>
-      <p>${catalog.games.length} ${catalog.games.length === 1 ? "spil" : "spil"} · ${ch === "dev" ? "Du ser <b>Dev</b>-kanalen – de nyeste, utestede versioner." : "Spil direkte i browseren – intet at installere."}</p>
+      <p>${games.length} spil fra ${devs.length} ${devs.length === 1 ? "udvikler" : "udviklere"} · Spil dem, giv dem stjerner – og byg selv det næste.
+        ${ch === "dev" ? " Du ser <b>Dev</b>-kanalen." : ""}</p>
+      ${community.error ? `<p class="warn">Bedømmelserne kunne ikke hentes fra GitHub lige nu (${esc(community.error)}). Prøv igen om lidt.</p>` : ""}
     </section>
-    <section class="grid">${cards.join("") || `<p class="empty">Ingen spil endnu.</p>`}</section>`;
+    <section class="filters">
+      <div class="chips"><button data-type="" class="${view.type ? "" : "on"}">Alle</button>${types.map((t) => `<button data-type="${esc(t)}" class="${view.type === t ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
+      <span class="spacer"></span>
+      <label>Udvikler <select data-dev><option value="">Alle</option>${devs.map(([k, n]) => `<option value="${esc(k)}" ${view.dev === k ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
+      <label>Sortér <select data-sort>
+        ${([["best", "Bedst bedømt"], ["votes", "Flest bedømmelser"], ["new", "Nyeste"], ["az", "A–Å"]] as const).map(([k, n]) => `<option value="${k}" ${view.sort === k ? "selected" : ""}>${n}</option>`).join("")}
+      </select></label>
+    </section>
+    <section class="grid">${cards.join("") || `<p class="empty">Ingen spil passer til filtret.</p>`}
+      ${repo ? `<a class="card add" href="${esc(submitUrl(repo))}" target="_blank" rel="noopener"><div class="add-body"><span>＋</span><b>Tilføj dit spil</b><p>Indsend det på GitHub – så er du med i konkurrencen.</p></div></a>` : ""}
+    </section>`;
+  app.querySelectorAll<HTMLButtonElement>("[data-type]").forEach((b) => (b.onclick = () => ((view.type = b.dataset.type!), catalogPage())));
+  app.querySelector<HTMLSelectElement>("[data-dev]")!.onchange = (e) => ((view.dev = (e.target as HTMLSelectElement).value), catalogPage());
+  app.querySelector<HTMLSelectElement>("[data-sort]")!.onchange = (e) => ((view.sort = (e.target as HTMLSelectElement).value as typeof view.sort), catalogPage());
 }
+
+const newest = (g: Game) => g.date ?? g.versions.at(-1)?.date ?? "";
 
 function gamePage(g: Game) {
   const ch = getChannel();
+  const sc = scoreOf(g.slug);
+  const repo = catalog.platform?.repo;
   const v = g.channels[ch];
   const other: Channel = ch === "prod" ? "dev" : "prod";
   app.innerHTML = `
@@ -107,33 +199,89 @@ function gamePage(g: Game) {
         <a class="back" href="#/">← Bibliotek</a>
         <h1>${esc(g.title)}</h1>
         <p class="tagline">${esc(g.tagline)}</p>
-        <div class="meta">${g.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+        <p class="by">af <b>${esc(devName(g.developer))}</b></p>
+        <div class="meta"><span class="tag type">${esc(g.type || "Andet")}</span>${g.tags.filter((t) => t !== g.type).map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+        <div class="rating">${starsHtml(sc.avg, sc.votes.length)}
+          ${repo ? `<a class="rate" href="${esc(rateUrl(repo, g.slug, g.title))}" target="_blank" rel="noopener">★ Bedøm spillet</a>` : ""}</div>
         <p class="desc">${esc(g.description)}</p>
-        ${v
+        ${g.url
+          ? `<a class="play" href="#/spil/${g.slug}/spil">▶ Spil nu</a>
+             <p class="muted small">Et spil fra en kollega · <a href="${esc(g.url)}" target="_blank" rel="noopener">åbn i nyt vindue</a></p>`
+          : v
           ? `<a class="play" href="#/spil/${g.slug}/spil">▶ Spil nu</a>
              <p class="muted">Version ${esc(v)}${devMode ? ` ${channelBadge(ch)}${g.channels[other] && g.channels[other] !== v ? ` · ${CHANNEL_NAME[other]}: ${esc(g.channels[other]!)}` : ""}` : ""}</p>`
           : `<p class="soon-note">${devMode ? `Ikke udgivet på ${CHANNEL_NAME[ch]} endnu.${g.channels[other] ? ` Skift til ${CHANNEL_NAME[other]} for at spille version ${esc(g.channels[other]!)}.` : ""}` : "Kommer snart."}</p>`}
-        <p class="muted small">Dit spil gemmes i browseren.${devMode ? ` ${CHANNEL_NAME.prod} og ${CHANNEL_NAME.dev} har hver deres gemte spil.` : ""}</p>
+        <p class="muted small">Dit spil gemmes i browseren.${devMode && !g.url ? ` ${CHANNEL_NAME.prod} og ${CHANNEL_NAME.dev} har hver deres gemte spil.` : ""}</p>
       </div>
-    </section>`;
+    </section>
+    ${reviewsHtml(sc)}`;
+}
+
+/** What people wrote, newest first (their own words, as written – escaped). */
+function reviewsHtml(sc: Score) {
+  const said = sc.votes.filter((r) => r.comment.trim()).sort((a, b) => b.date.localeCompare(a.date));
+  if (!said.length) return "";
+  return `<section class="reviews"><h2>Det siger kollegerne</h2>
+    ${said.slice(0, 20).map((r) => `<div class="review"><div class="review-head">${"★".repeat(r.stars)}<i>${"★".repeat(STARS - r.stars)}</i>
+      <b>${esc(r.user)}</b><span class="muted small">${fmtDate(r.date)}</span></div><p>${esc(r.comment)}</p></div>`).join("")}</section>`;
 }
 
 function playPage(g: Game) {
   const ch = getChannel();
-  const v = g.channels[ch];
+  const v = g.url ? "live" : g.channels[ch];
   if (!v) return gamePage(g);
+  const src = g.url ?? `games/${g.slug}/${encodeURIComponent(v)}/index.html?channel=${ch}`;
   document.body.classList.add("playing");
   app.innerHTML = `
     <div class="player">
       <div class="player-bar">
         <a class="back" href="#/spil/${g.slug}">← ${esc(g.title)}</a>
-        <span class="muted">v${esc(v)}</span>${channelBadge(ch)}
+        ${g.url ? `<span class="muted">af ${esc(devName(g.developer))}</span>` : `<span class="muted">v${esc(v)}</span>${channelBadge(ch)}`}
         <span class="spacer"></span>
         <button id="fullscreen" title="Fuld skærm">⛶ Fuld skærm</button>
       </div>
-      <iframe id="game-frame" src="games/${g.slug}/${encodeURIComponent(v)}/index.html?channel=${ch}" title="${esc(g.title)}" allow="fullscreen; autoplay"></iframe>
+      <iframe id="game-frame" src="${esc(src)}" title="${esc(g.title)}" allow="fullscreen; autoplay"></iframe>
     </div>`;
   document.getElementById("fullscreen")!.onclick = () => document.getElementById("game-frame")!.requestFullscreen?.();
+}
+
+// ---- The leaderboard ----------------------------------------------------------------------------------------
+
+function leaderboardPage() {
+  // Developers: points are all the stars given to their games (by others).
+  const devs = new Map<string, { name: string; points: number; votes: number; games: Game[] }>();
+  for (const g of games) {
+    const k = devKey(g.developer);
+    const d = devs.get(k) ?? { name: devName(g.developer), points: 0, votes: 0, games: [] };
+    const sc = scoreOf(g.slug);
+    d.points += sc.sum;
+    d.votes += sc.votes.length;
+    d.games.push(g);
+    devs.set(k, d);
+  }
+  const byPoints = [...devs.values()].sort((a, b) => b.points - a.points || b.votes - a.votes || a.name.localeCompare(b.name));
+  const byGames = [...devs.values()].sort((a, b) => b.games.length - a.games.length || b.points - a.points);
+  const ranked = games.map((g) => ({ g, sc: scoreOf(g.slug) })).filter((x) => x.sc.votes.length >= MIN_VOTES)
+    .sort((a, b) => b.sc.avg - a.sc.avg || b.sc.votes.length - a.sc.votes.length);
+  const waiting = games.filter((g) => scoreOf(g.slug).votes.length < MIN_VOTES);
+  const medal = (i: number) => (i < 3 ? ["🥇", "🥈", "🥉"][i] : `${i + 1}.`);
+  const filter = (k: string) => `#/?udvikler=${encodeURIComponent(k)}`;
+  app.innerHTML = `
+    <section class="hero"><h1>Topliste</h1>
+      <p>Point er alle de stjerner, ens spil har fået af andre. Hver person tæller én gang pr. spil (den nyeste bedømmelse), og man kan ikke bedømme sine egne spil.</p>
+      ${community.error ? `<p class="warn">Bedømmelserne kunne ikke hentes fra GitHub lige nu – toplisten er tom indtil da.</p>` : ""}</section>
+    <section class="boards">
+      <div class="board"><h2>Flest point</h2>
+        <table>${byPoints.map((d, i) => `<tr><td class="rank">${medal(i)}</td><td><a href="${filter(devKey(d.games[0].developer))}">${esc(d.name)}</a></td>
+          <td class="num"><b>${d.points}</b> point</td><td class="num muted">${d.votes} ${d.votes === 1 ? "stemme" : "stemmer"}</td></tr>`).join("")}</table></div>
+      <div class="board"><h2>Bedste spil</h2>
+        ${ranked.length ? `<table>${ranked.map(({ g, sc }, i) => `<tr><td class="rank">${medal(i)}</td><td><a href="#/spil/${g.slug}">${esc(g.title)}</a><div class="muted small">${esc(devName(g.developer))}</div></td>
+          <td class="num">${starsHtml(sc.avg, sc.votes.length, true)}</td></tr>`).join("")}</table>` : `<p class="muted">Endnu intet spil med ${MIN_VOTES} bedømmelser.</p>`}
+        ${waiting.length ? `<p class="muted small">Mangler stemmer (under ${MIN_VOTES}): ${waiting.map((g) => `<a href="#/spil/${g.slug}">${esc(g.title)}</a> (${scoreOf(g.slug).votes.length})`).join(", ")}</p>` : ""}</div>
+      <div class="board"><h2>Flest spil</h2>
+        <table>${byGames.map((d, i) => `<tr><td class="rank">${medal(i)}</td><td><a href="${filter(devKey(d.games[0].developer))}">${esc(d.name)}</a>
+          <div class="muted small">${d.games.map((g) => esc(g.title)).join(", ")}</div></td><td class="num"><b>${d.games.length}</b> spil</td></tr>`).join("")}</table></div>
+    </section>`;
 }
 
 function notFound() {
@@ -144,10 +292,17 @@ function notFound() {
 
 function route() {
   document.body.classList.remove("playing");
-  const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
-  if (!parts.length) return catalogPage();
+  const [path, query = ""] = location.hash.replace(/^#\/?/, "").split("?");
+  const parts = path.split("/").filter(Boolean);
+  document.querySelectorAll<HTMLAnchorElement>("nav a").forEach((a) => a.classList.toggle("on", a.getAttribute("href") === `#/${parts[0] ?? ""}`));
+  if (!parts.length) {
+    const dev = new URLSearchParams(query).get("udvikler");
+    if (dev !== null) view.dev = dev;
+    return catalogPage();
+  }
+  if (parts[0] === "topliste") return leaderboardPage();
   if (parts[0] === "spil" && parts[1]) {
-    const g = catalog.games.find((x) => x.slug === parts[1]);
+    const g = games.find((x) => x.slug === parts[1]);
     if (!g) return notFound();
     document.title = `${g.title} – ${document.getElementById("brand-title")!.textContent}`;
     return parts[2] === "spil" ? playPage(g) : gamePage(g);
@@ -169,6 +324,13 @@ async function start() {
     document.getElementById("brand-title")!.textContent = catalog.platform.title;
     document.title = catalog.platform.title;
   }
+  const repo = catalog.platform?.repo;
+  const submit = document.getElementById("nav-submit") as HTMLAnchorElement;
+  if (repo) submit.href = submitUrl(repo);
+  else submit.hidden = true;
+  community = await loadCommunity(repo);
+  games = [...catalog.games, ...community.games.map(fromCommunity)];
+  computeScores();
   window.addEventListener("hashchange", route);
   // A game asks to go back to the menu (its own "Tilbage til menu"): show the game's page again.
   window.addEventListener("message", (e) => {

@@ -29,6 +29,20 @@ export function saveCatalog(catalog) {
   writeJson(CATALOG, catalog);
 }
 
+/** What the catalog shows of a game, from games.config.json. */
+export const gameMeta = (meta) => ({
+  title: meta.title, tagline: meta.tagline, description: meta.description, cover: meta.cover, tags: meta.tags ?? [],
+  developer: meta.developer ?? null, type: meta.type ?? "Andet",
+});
+
+/** Bring every published game's title, developer, type … up to date with games.config.json (no new version needed). */
+export function syncMeta() {
+  const catalog = loadCatalog();
+  const games = config().games;
+  for (const g of catalog.games) if (games[g.slug]) Object.assign(g, gameMeta(games[g.slug]));
+  saveCatalog(catalog);
+}
+
 export function findGame(catalog, slug) {
   const game = catalog.games.find((g) => g.slug === slug);
   if (!game) fail(`Spillet "${slug}" er ikke udgivet endnu. Brug: npm run publish-game -- ${slug}`);

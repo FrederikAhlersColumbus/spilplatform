@@ -1,0 +1,55 @@
+name: Tilføj dit spil
+description: Indsend et spil til konkurrencen. Det kommer på spilsiden, når det er godkendt.
+title: "Nyt spil: "
+labels: ["nyt-spil"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Spillet skal kunne spilles i en browser fra en offentlig adresse, fx GitHub Pages
+        (`https://<dit-brugernavn>.github.io/<repo>/`). Det vises i en ramme på spilsiden.
+  - type: input
+    id: titel
+    attributes:
+      label: Titel
+    validations:
+      required: true
+  - type: input
+    id: udvikler
+    attributes:
+      label: Udvikler
+      description: Dit navn, som det skal stå på toplisten.
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Adresse
+      description: Hvor spillet kan spilles (https://…).
+      placeholder: https://brugernavn.github.io/mit-spil/
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options: [Strategi, Simulation, Action, Arkade, Puslespil, Eventyr, Sport, Andet]
+    validations:
+      required: true
+  - type: input
+    id: tagline
+    attributes:
+      label: Kort beskrivelse
+      description: Én linje, der vises på kortet.
+    validations:
+      required: true
+  - type: textarea
+    id: beskrivelse
+    attributes:
+      label: Beskrivelse
+      description: Hvad går spillet ud på?
+  - type: input
+    id: cover
+    attributes:
+      label: Coverbillede
+      description: Valgfrit – adressen på et billede i 16:9 (https://…).

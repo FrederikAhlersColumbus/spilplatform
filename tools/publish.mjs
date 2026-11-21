@@ -6,7 +6,7 @@
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { ROOT, SITE, arg, config, fail, loadCatalog, positional, printStatus, readJson, saveCatalog, writeJson } from "./lib.mjs";
+import { ROOT, SITE, arg, config, fail, gameMeta, loadCatalog, positional, printStatus, readJson, saveCatalog, writeJson } from "./lib.mjs";
 
 const [slug] = positional();
 if (!slug) fail("Angiv et spil, fx: npm run publish-game -- simfarm");
@@ -44,7 +44,7 @@ if (!game) {
   catalog.games.push(game);
 }
 // Title, description etc. always follow games.config.json.
-Object.assign(game, { title: meta.title, tagline: meta.tagline, description: meta.description, cover: meta.cover, tags: meta.tags ?? [] });
+Object.assign(game, gameMeta(meta));
 game.versions.unshift({ version, date: new Date().toISOString(), notes: arg("notes") ?? "" });
 game.channels.dev = version;
 saveCatalog(catalog);

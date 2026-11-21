@@ -1,0 +1,21 @@
+# A rating is an issue made from the "Bedøm et spil" form. The platform reads the ratings straight from
+# the issues, so there is nothing to store: this only thanks the voter and closes the issue, to keep the
+# list of open issues for real ones.
+name: Bedømmelser
+on:
+  issues:
+    types: [opened]
+permissions:
+  issues: write
+jobs:
+  close:
+    if: contains(github.event.issue.labels.*.name, 'bedømmelse')
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          gh issue comment "$NUMBER" --repo "$REPO" --body "Tak for din bedømmelse! Den tæller med på spilsiden om få minutter. Vil du ændre den, så bedøm spillet igen – den nyeste tæller."
+          gh issue close "$NUMBER" --repo "$REPO" --reason completed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}

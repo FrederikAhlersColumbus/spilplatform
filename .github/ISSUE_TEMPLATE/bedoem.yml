@@ -1,0 +1,29 @@
+name: Bedøm et spil
+description: Giv et spil 1–5 stjerner. Din seneste bedømmelse af et spil er den, der tæller.
+title: "Bedømmelse"
+labels: ["bedømmelse"]
+body:
+  - type: input
+    id: spil
+    attributes:
+      label: Spil
+      description: Udfyldes af spilsiden, når du trykker "Bedøm" – lad det stå.
+    validations:
+      required: true
+  - type: dropdown
+    id: stjerner
+    attributes:
+      label: Stjerner
+      options:
+        - "5 – Fantastisk"
+        - "4 – Rigtig godt"
+        - "3 – Godt"
+        - "2 – Nja"
+        - "1 – Ikke for mig"
+    validations:
+      required: true
+  - type: textarea
+    id: kommentar
+    attributes:
+      label: Kommentar
+      description: Hvad var sjovt – og hvad kunne være bedre? (valgfrit, vises på spillets side)

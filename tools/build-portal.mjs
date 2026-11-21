@@ -2,7 +2,9 @@
 import { spawnSync } from "node:child_process";
 import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, SITE, fail } from "./lib.mjs";
+import { ROOT, SITE, fail, syncMeta } from "./lib.mjs";
+
+syncMeta();
 
 rmSync(join(SITE, "portal-assets"), { recursive: true, force: true });
 // publicDir is only for the dev server; skip copying it into itself on build.

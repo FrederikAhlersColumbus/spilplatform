@@ -1,12 +1,18 @@
 {
   "platform": {
     "title": "Spilplatform",
-    "tagline": "Mine spil – direkte i browseren"
+    "tagline": "Hvem laver det sjoveste spil?",
+    "repo": "FrederikAhlersColumbus/spilplatform"
   },
   "games": {
     "bondegaarden": {
       "path": "../../simfarm",
       "title": "Bondegaarden",
+      "developer": {
+        "name": "Frederik Ahlers",
+        "github": "FrederikAhlersColumbus"
+      },
+      "type": "Simulation",
       "tagline": "Byg din egen bondegård – fra første pløjning til egen by",
       "description": "Et isometrisk landbrugsspil i ånden fra 90'ernes klassiske simulationer. Ryd jorden, læg marker ud, pløj og så, hold dyr, køb maskiner og byg lader – mens vejret, markedspriserne og banken gør livet svært for dig. Du starter med et gårdlån, og alt markarbejde kræver maskiner, som kører ud fra laden og helst på vej.",
       "cover": "covers/bondegaarden.svg",
@@ -19,6 +25,11 @@
     "kolonien": {
       "path": "../kolonien",
       "title": "Kolonien",
+      "developer": {
+        "name": "Frederik Ahlers",
+        "github": "FrederikAhlersColumbus"
+      },
+      "type": "Strategi",
       "tagline": "Grundlæg et nyt land i Den Nye Verden – og gør det frit",
       "description": "Et turbaseret strategispil i ånden fra Sid Meier's Colonization. Vælg mellem fem nationer – Danmark-Norge, England, Frankrig, Spanien og Nederlandene – hver med sin fordel, og led en ekspedition til Den Nye Verden i år 1600: udforsk kysten, grundlæg kolonier, sæt kolonisterne til at dyrke jorden og arbejde i værkstederne, og handl med Europa. Mød de indfødte folk og lær af dem – eller gør dem vrede. Når frihedsånden er stærk nok, erklærer du uafhængighed og må slå Kongens hær.",
       "cover": "covers/kolonien.svg",

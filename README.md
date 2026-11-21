@@ -49,7 +49,24 @@ npm run deploy                                          # læg site/ ud på GitH
 Spillet kører i en iframe med `?channel=dev|prod`. Vil spillet have en "Tilbage til menu"-knap, sender det
 `window.parent.postMessage({ type: "spilplatform:exit" }, "*")` – så viser platformen spillets side igen.
 
-## Første gang (GitHub Pages)
+## Konkurrencen: kollegers spil, bedømmelser og topliste
+
+Alt foregår i repoets GitHub-issues – der er ingen server eller database. Portalen læser issues med GitHubs
+offentlige API (uden login, gemt et par minutter i browseren).
+
+- **Bedøm et spil**: knappen "★ Bedøm spillet" åbner formularen `bedoem.yml` med spillet udfyldt. 1–5 stjerner og
+  en valgfri kommentar. Én stemme pr. GitHub-konto pr. spil tæller – den nyeste. Egne spil kan ikke bedømmes.
+  Workflowet `bedoemmelser.yml` takker og lukker issuet (lukkede tæller stadig).
+- **Tilføj dit spil**: formularen `nyt-spil.yml` (titel, udvikler, adresse, type, beskrivelse, cover). Spillet skal
+  ligge på en offentlig adresse, fx GitHub Pages, og vises i en ramme. **Det kommer først på siden, når issuet får
+  labelen `godkendt`.** Vil man trække det tilbage, fjernes labelen.
+- **Topliste** (`#/topliste`): flest point (summen af stjerner på ens spil), bedste spil (gennemsnit, mindst 3
+  stemmer) og flest spil.
+- Egne spil får `developer` og `type` i `games.config.json`; de opdateres i kataloget ved hver `deploy`.
+
+Labels der skal findes i repoet: `bedømmelse`, `nyt-spil`, `godkendt`.
+
+
 
 ```bash
 git init -b main && git add -A && git commit -m "Spilplatform"
