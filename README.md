@@ -55,10 +55,10 @@ Ingen server: kolleger bruger GitHub-formularer, en **dommer** (workflowet `konk
 skriver resultatet i `ledger.json` på grenen **`data`** – den eneste kilde, portalen tæller fra.
 
 - **Bedøm et spil** (formularen `bedoem.yml`, åbnes med "★ Bedøm spillet"): dommeren godkender kun, hvis
-  kontoen står i **`voters.json`**, er mindst 30 dage gammel, spillet findes og ikke er ens eget. Stemmen gemmes,
+  kontoen er mindst 30 dage gammel og ikke spærret i **`voters.json`**, spillet findes og ikke er ens eget. Stemmen gemmes,
   som den var ved oprettelsen; issuet lukkes og låses. Rettelser bagefter tæller ikke. Den nyeste stemme pr.
-  person pr. spil gælder.
-- **Tilføj dit spil** (formularen `nyt-spil.yml`): fra en kollega på `voters.json` kommer det **straks** på siden
+  person pr. spil gælder. Du (admin) kan stryge en stemme med labelen `afvist` på dens issue.
+- **Tilføj dit spil** (formularen `nyt-spil.yml`): fra en tilladt konto kommer det **straks** på siden
   (teksten ved oprettelsen gemmes, issuet låses). Fra andre venter det, til **du** (admin) sætter labelen `godkendt`.
   Labelen `afvist` tager et spil af siden. Andre, der sætter labelerne, får dem fjernet. Dommeren nævner dig
   (`@ejeren`) i issuet, så GitHub sender dig en mail. Spillet kører i en sandkasse-ramme.
@@ -72,9 +72,12 @@ Labels der skal findes i repoet: `bedømmelse`, `nyt-spil`, `godkendt`, `afvist`
 
 ### Sikkerhed – det skal holdes
 - **Giv aldrig kolleger skriveadgang til repoet.** Så kan kun du og dommeren skrive `main`, `data` og labels.
-- Ny kollega: tilføj GitHub-brugernavnet i `voters.json` og push.
+- `voters.json`: `"open": true` = alle med en GitHub-konto på mindst `minAccountAgeDays` dage kan være med.
+  Snyder nogen, så sæt brugernavnet i `"blocked"` og stryg deres stemmer med labelen `afvist`. Sæt `"open": false`
+  for kun at lade navnene i `"voters"` være med.
 - Bliver en stemme snydt ind alligevel, så slet den i `ledger.json` på `data`-grenen – det er hele regnskabet.
-- Kendte grænser: én person med flere konti kan kun stemme, hvis du har sat begge på listen; stemmebytte
+- Kendte grænser: med `open` kan én person med flere gamle konti stemme flere gange – stemmerne er åbne, så det
+  ses, og kontoalderen gør det besværligt; stemmebytte
   mellem kolleger kan ikke forhindres teknisk – derfor er alle stemmer offentlige.
 
 ## Første gang (GitHub Pages)

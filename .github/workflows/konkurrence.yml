@@ -3,11 +3,12 @@
 # counts. Only this workflow (and Frederik) can write that branch, so editing an issue afterwards, extra
 # GitHub accounts or a hand-made issue change nothing.
 #
-#   • Rating (label "bedømmelse"): the voter must be on voters.json, the account at least minAccountAgeDays old,
-#     the game must exist and not be the voter's own. Accepted or not, the issue is answered, closed and locked.
-#   • Game (label "nyt-spil"): from a colleague on voters.json it goes straight onto the page (as the issue reads
-#     when made); from anyone else it waits until a repository admin adds the label "godkendt". Either way the
-#     owner is @mentioned – GitHub mails the mention. An admin's label "afvist" takes a game off the page again.
+#   • Rating (label "bedømmelse"): the voter must be allowed by voters.json (everyone when "open", else the list;
+#     never "blocked"), the account at least minAccountAgeDays old, the game must exist and not be the voter's own.
+#     Accepted or not, the issue is answered, closed and locked. An admin's label "afvist" strikes the rating.
+#   • Game (label "nyt-spil"): from an allowed account it goes straight onto the page (as the issue reads when
+#     made); from anyone else it waits until a repository admin adds the label "godkendt". Either way the owner
+#     is @mentioned – GitHub mails the mention. An admin's label "afvist" takes a game off the page again.
 #
 # Security: the issue text is only ever read as data inside JavaScript (never put into a shell command),
 # the token can do no more than the job needs, and runs are queued one at a time so no write is lost.
@@ -71,7 +72,9 @@ jobs:
 
             const owner_ = owner; // the repository's owner: the one to tell
             const voters = (await readJson("voters.json", MAIN)).json;
-            const onList = (login) => voters.voters.some((v) => v.toLowerCase() === login.toLowerCase());
+            const has = (list, login) => (list || []).some((v) => v.toLowerCase() === login.toLowerCase());
+            // open: everyone with an old enough account; otherwise only the names on the list. Blocked never.
+            const onList = (login) => !has(voters.blocked, login) && (voters.open === true || has(voters.voters, login));
             const oldEnough = async (login) => {
               const user = (await github.rest.users.getByUsername({ username: login })).data;
               return (Date.now() - Date.parse(user.created_at)) / 86400000 >= (voters.minAccountAgeDays ?? 30);
@@ -86,7 +89,7 @@ jobs:
               const no = (why) => reply(`❌ Bedømmelsen tæller ikke: ${why}`, true);
 
               if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(game)) return no("brug knappen ★ Bedøm spillet på spilsiden.");
-              if (!onList(login)) return no(`@${login} er ikke på listen over kolleger, der kan stemme. Bed Frederik om at blive tilføjet.`);
+              if (!onList(login)) return no(`@${login} kan ikke stemme i konkurrencen. Spørg Frederik, hvis det er en fejl.`);
               if (!(await oldEnough(login))) return no(`GitHub-kontoen skal være mindst ${voters.minAccountAgeDays ?? 30} dage gammel.`);
               if (!(stars >= 1 && stars <= 5)) return no("vælg 1–5 stjerner.");
 
@@ -135,14 +138,23 @@ jobs:
               return reply(`Tak for dit spil! Det kommer på spilsiden, når Frederik har godkendt det.\n\n@${owner_}: et spil fra en, der ikke er på kollegalisten, venter på din godkendelse – sæt labelen \`godkendt\` (eller \`afvist\`).`, false);
             }
 
-            // ---- An admin's decision: "godkendt" puts it on, "afvist" takes it off ----------------------
-            if (!labels.includes("nyt-spil")) return;
+            // ---- An admin's decision: "godkendt" puts a game on, "afvist" takes a game or a rating off --
+            const isRating = labels.includes("bedømmelse");
+            if (!labels.includes("nyt-spil") && !isRating) return;
             const name = context.payload.label.name;
             const actor = context.payload.sender.login;
             const perm = (await github.rest.repos.getCollaboratorPermissionLevel({ owner, repo, username: actor })).data.permission;
             if (perm !== "admin") {
               await github.rest.issues.removeLabel({ owner, repo, issue_number: issue.number, name }).catch(() => {});
               return;
+            }
+            if (isRating) {
+              if (name !== "afvist") return;
+              const before = ledger.ratings.length;
+              ledger.ratings = ledger.ratings.filter((r) => r.issue !== issue.number);
+              if (ledger.ratings.length === before) return;
+              await save(`Bedømmelse #${issue.number} strøget`);
+              return github.rest.issues.createComment({ owner, repo, issue_number: issue.number, body: "Bedømmelsen er strøget og tæller ikke længere." }).catch(() => {});
             }
             if (name === "afvist") {
               const slug = `c${issue.number}`;

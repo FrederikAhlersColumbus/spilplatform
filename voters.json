@@ -1,7 +1,9 @@
 {
-  "note": "Kun disse GitHub-konti kan bedømme spil. Tilføj en kollega ved at skrive brugernavnet her (store/små bogstaver er ligegyldige).",
+  "note": "open: true = alle med en GitHub-konto på mindst minAccountAgeDays dage kan bedømme og tilføje spil. open: false = kun brugernavnene i voters. Konti i blocked kan aldrig (store/små bogstaver er ligegyldige).",
+  "open": true,
   "minAccountAgeDays": 30,
   "voters": [
     "FrederikAhlersColumbus"
-  ]
+  ],
+  "blocked": []
 }
