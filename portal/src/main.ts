@@ -399,13 +399,13 @@ function route() {
   document.body.classList.remove("playing");
   const [path, query = ""] = location.hash.replace(/^#\/?/, "").split("?");
   const parts = path.split("/").filter(Boolean);
+  track(`/${path}`);
   document.querySelectorAll<HTMLAnchorElement>("nav a").forEach((a) => a.classList.toggle("on", a.getAttribute("href") === `#/${parts[0] ?? ""}`));
   if (!parts.length) {
     const dev = new URLSearchParams(query).get("udvikler");
     if (dev !== null) view.dev = dev;
     return catalogPage();
   }
-  track(`/${path}`);
   if (parts[0] === "topliste") return leaderboardPage();
   if (parts[0] === "guide") return guidePage();
   if (parts[0] === "spil" && parts[1]) {
