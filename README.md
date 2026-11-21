@@ -51,22 +51,30 @@ Spillet kører i en iframe med `?channel=dev|prod`. Vil spillet have en "Tilbage
 
 ## Konkurrencen: kollegers spil, bedømmelser og topliste
 
-Alt foregår i repoets GitHub-issues – der er ingen server eller database. Portalen læser issues med GitHubs
-offentlige API (uden login, gemt et par minutter i browseren).
+Ingen server: kolleger bruger GitHub-formularer, en **dommer** (workflowet `konkurrence.yml`) tjekker dem og
+skriver resultatet i `ledger.json` på grenen **`data`** – den eneste kilde, portalen tæller fra.
 
-- **Bedøm et spil**: knappen "★ Bedøm spillet" åbner formularen `bedoem.yml` med spillet udfyldt. 1–5 stjerner og
-  en valgfri kommentar. Én stemme pr. GitHub-konto pr. spil tæller – den nyeste. Egne spil kan ikke bedømmes.
-  Workflowet `bedoemmelser.yml` takker og lukker issuet (lukkede tæller stadig).
-- **Tilføj dit spil**: formularen `nyt-spil.yml` (titel, udvikler, adresse, type, beskrivelse, cover). Spillet skal
-  ligge på en offentlig adresse, fx GitHub Pages, og vises i en ramme. **Det kommer først på siden, når issuet får
-  labelen `godkendt`.** Vil man trække det tilbage, fjernes labelen.
+- **Bedøm et spil** (formularen `bedoem.yml`, åbnes med "★ Bedøm spillet"): dommeren godkender kun, hvis
+  kontoen står i **`voters.json`**, er mindst 30 dage gammel, spillet findes og ikke er ens eget. Stemmen gemmes,
+  som den var ved oprettelsen; issuet lukkes og låses. Rettelser bagefter tæller ikke. Den nyeste stemme pr.
+  person pr. spil gælder.
+- **Tilføj dit spil** (formularen `nyt-spil.yml`): kommer først på siden, når **du** (admin) giver issuet labelen
+  `godkendt` – teksten på det tidspunkt gemmes. Andre, der sætter labelen, får den fjernet. Fjern labelen for at
+  trække spillet tilbage. Spillet kører i en sandkasse-ramme og kan ikke styre spilsiden.
 - **Topliste** (`#/topliste`): flest point (summen af stjerner på ens spil), bedste spil (gennemsnit, mindst 3
-  stemmer) og flest spil.
+  stemmer), flest spil. Alle stemmer står åbent på spillets side med link til issuet.
 - Egne spil får `developer` og `type` i `games.config.json`; de opdateres i kataloget ved hver `deploy`.
 
 Labels der skal findes i repoet: `bedømmelse`, `nyt-spil`, `godkendt`.
 
+### Sikkerhed – det skal holdes
+- **Giv aldrig kolleger skriveadgang til repoet.** Så kan kun du og dommeren skrive `main`, `data` og labels.
+- Ny kollega: tilføj GitHub-brugernavnet i `voters.json` og push.
+- Bliver en stemme snydt ind alligevel, så slet den i `ledger.json` på `data`-grenen – det er hele regnskabet.
+- Kendte grænser: én person med flere konti kan kun stemme, hvis du har sat begge på listen; stemmebytte
+  mellem kolleger kan ikke forhindres teknisk – derfor er alle stemmer offentlige.
 
+## Første gang (GitHub Pages)
 
 ```bash
 git init -b main && git add -A && git commit -m "Spilplatform"

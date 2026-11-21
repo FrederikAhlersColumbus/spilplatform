@@ -1,0 +1,133 @@
+# The competition's referee. The platform never trusts what an issue says *now*: when a rating is created,
+# this workflow checks it and writes it into ledger.json on the "data" branch – the only record the portal
+# counts. Only this workflow (and Frederik) can write that branch, so editing an issue afterwards, extra
+# GitHub accounts or a hand-made issue change nothing.
+#
+#   • Rating (label "bedømmelse"): the voter must be on voters.json, the account at least minAccountAgeDays old,
+#     the game must exist and not be the voter's own. Accepted or not, the issue is answered, closed and locked.
+#   • Game (label "nyt-spil"): it enters the ledger only when a repository admin adds the label "godkendt" –
+#     as the issue reads at that moment – and leaves it when the label is removed.
+#
+# Security: the issue text is only ever read as data inside JavaScript (never put into a shell command),
+# the token can do no more than the job needs, and runs are queued one at a time so no write is lost.
+name: Konkurrence
+on:
+  issues:
+    types: [opened, labeled, unlabeled]
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: konkurrence-ledger
+  cancel-in-progress: false
+jobs:
+  referee:
+    if: >-
+      (github.event.action == 'opened' && (contains(github.event.issue.labels.*.name, 'bedømmelse') || contains(github.event.issue.labels.*.name, 'nyt-spil'))) ||
+      (github.event.action != 'opened' && github.event.label.name == 'godkendt')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issue = context.payload.issue;
+            const labels = issue.labels.map((l) => l.name);
+            const LEDGER = "ledger.json", BRANCH = "data";
+            const MAIN = context.payload.repository.default_branch;
+
+            const fields = (body) => {
+              const out = {};
+              for (const part of (body || "").split(/^### /m).slice(1)) {
+                const nl = part.indexOf("\n");
+                const v = part.slice(nl + 1).trim();
+                out[part.slice(0, nl).trim()] = v === "_No response_" ? "" : v;
+              }
+              return out;
+            };
+            const clean = (s, max) => String(s || "").replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "").trim().slice(0, max);
+            const httpsUrl = (u) => (/^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[^\s"'<>]*)?$/.test(u || "") ? u : "");
+            const readJson = async (path, ref) => {
+              const r = await github.rest.repos.getContent({ owner, repo, path, ref });
+              return { json: JSON.parse(Buffer.from(r.data.content, "base64").toString("utf8")), sha: r.data.sha };
+            };
+            const reply = async (text, close) => {
+              await github.rest.issues.createComment({ owner, repo, issue_number: issue.number, body: text });
+              if (close) {
+                await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: "closed", state_reason: "completed" });
+                await github.rest.issues.lock({ owner, repo, issue_number: issue.number, lock_reason: "resolved" });
+              }
+            };
+
+            const ledgerNow = await readJson(LEDGER, BRANCH);
+            const ledger = ledgerNow.json;
+            const save = async (message) => {
+              await github.rest.repos.createOrUpdateFileContents({
+                owner, repo, path: LEDGER, branch: BRANCH, message, sha: ledgerNow.sha,
+                content: Buffer.from(JSON.stringify(ledger, null, 2) + "\n").toString("base64"),
+              });
+            };
+
+            // ---- A rating -------------------------------------------------------------------------
+            if (context.payload.action === "opened" && labels.includes("bedømmelse")) {
+              const login = issue.user.login;
+              const f = fields(issue.body);
+              const game = clean(f["Spil"], 60).toLowerCase();
+              if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(game)) return reply("❌ Bedømmelsen tæller ikke: brug knappen ★ Bedøm spillet på spilsiden.", true);
+              const stars = parseInt(f["Stjerner"], 10);
+              const no = (why) => reply(`❌ Bedømmelsen tæller ikke: ${why}`, true);
+
+              const voters = (await readJson("voters.json", MAIN)).json;
+              if (!voters.voters.some((v) => v.toLowerCase() === login.toLowerCase())) return no(`@${login} er ikke på listen over kolleger, der kan stemme. Bed Frederik om at blive tilføjet.`);
+              const user = (await github.rest.users.getByUsername({ username: login })).data;
+              const minAge = voters.minAccountAgeDays ?? 30;
+              if ((Date.now() - Date.parse(user.created_at)) / 86400000 < minAge) return no(`GitHub-kontoen skal være mindst ${minAge} dage gammel.`);
+              if (!(stars >= 1 && stars <= 5)) return no("vælg 1–5 stjerner.");
+
+              const cfg = (await readJson("games.config.json", MAIN)).json;
+              const own = Object.hasOwn(cfg.games, game) ? cfg.games[game] : null;
+              const theirs = ledger.games.find((g) => g.slug === game) ?? null;
+              if (!own && !theirs) return no(`spillet "${game}" findes ikke.`);
+              const dev = ((own ? own.developer?.github : theirs.developer.github) || "").toLowerCase();
+              if (dev === login.toLowerCase()) return no("man kan ikke bedømme sine egne spil.");
+
+              ledger.ratings.push({ game, user: login, stars, comment: clean(f["Kommentar"], 600), date: issue.created_at, issue: issue.number });
+              await save(`Bedømmelse #${issue.number}: ${login} → ${game} (${stars})`);
+              return reply(`✅ Tak! ${"★".repeat(stars)} til **${own ? own.title : theirs.title}** er talt med (vises på spilsiden inden for få minutter). Vil du ændre den, så bedøm igen – den nyeste tæller. Rettelser i dette issue tæller ikke.`, true);
+            }
+
+            // ---- A new game, waiting -----------------------------------------------------------------
+            if (context.payload.action === "opened" && labels.includes("nyt-spil")) {
+              return reply("Tak for dit spil! Det kommer på spilsiden, når Frederik har godkendt det. Ændrer du noget i teksten, så gør det før godkendelsen – det er teksten på det tidspunkt, der bruges.", false);
+            }
+
+            // ---- Approval (or withdrawal) of a game: only by an admin of the repository --------------
+            if (!labels.includes("nyt-spil") && context.payload.action === "labeled") return;
+            const actor = context.payload.sender.login;
+            const perm = (await github.rest.repos.getCollaboratorPermissionLevel({ owner, repo, username: actor })).data.permission;
+            if (perm !== "admin") {
+              await github.rest.issues.removeLabel({ owner, repo, issue_number: issue.number, name: "godkendt" }).catch(() => {});
+              return;
+            }
+            const slug = `c${issue.number}`;
+            ledger.games = ledger.games.filter((g) => g.slug !== slug);
+            if (context.payload.action === "unlabeled") {
+              await save(`Spil ${slug} trukket tilbage`);
+              return reply("Spillet er taget af spilsiden igen.", false);
+            }
+            const f = fields(issue.body);
+            const url = httpsUrl(f["Adresse"]);
+            const title = clean(f["Titel"], 60);
+            if (!url || !title) return reply("⚠️ Kunne ikke godkendes: titel og en https-adresse skal være udfyldt.", false);
+            ledger.games.push({
+              slug, title, url,
+              developer: { name: clean(f["Udvikler"], 60) || issue.user.login, github: issue.user.login },
+              type: clean(f["Type"], 30) || "Andet",
+              tagline: clean(f["Kort beskrivelse"], 140),
+              description: clean(f["Beskrivelse"], 2000),
+              cover: httpsUrl(f["Coverbillede"]) || undefined,
+              date: issue.created_at, issue: issue.number,
+            });
+            await save(`Spil ${slug} godkendt: ${title}`);
+            await reply(`✅ **${title}** er på spilsiden nu. Senere rettelser i dette issue kommer ikke med – fjern og sæt labelen \`godkendt\` igen for at opdatere.`, false);
+            await github.rest.issues.lock({ owner, repo, issue_number: issue.number, lock_reason: "resolved" }).catch(() => {});

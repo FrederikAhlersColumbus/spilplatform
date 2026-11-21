@@ -2,7 +2,7 @@
 // colleagues' games, ratings and the leaderboard. The published games come from catalog.json (kept by the
 // publish/promote tools); colleagues' games and all ratings come from the repository's GitHub issues.
 
-import { Community, CommunityGame, Rating, STARS, loadCommunity, rateUrl, submitUrl } from "./github";
+import { Community, CommunityGame, Rating, STARS, issueUrl, loadCommunity, rateUrl, submitUrl } from "./github";
 
 type Channel = "prod" | "dev";
 
@@ -28,7 +28,7 @@ interface Game {
   versions: Version[];
   /** A colleague's game, played from its own address (no channels or versions here). */
   url?: string;
-  issue?: string;
+  issue?: number;
   date?: string;
 }
 interface Catalog {
@@ -217,13 +217,21 @@ function gamePage(g: Game) {
     ${reviewsHtml(sc)}`;
 }
 
-/** What people wrote, newest first (their own words, as written – escaped). */
+/** What people wrote, newest first (their own words, as written – escaped) – and, open for all to see, who gave what. */
 function reviewsHtml(sc: Score) {
+  if (!sc.votes.length) return "";
+  const repo = catalog.platform?.repo;
   const said = sc.votes.filter((r) => r.comment.trim()).sort((a, b) => b.date.localeCompare(a.date));
-  if (!said.length) return "";
-  return `<section class="reviews"><h2>Det siger kollegerne</h2>
+  const all = [...sc.votes].sort((a, b) => b.stars - a.stars || a.user.localeCompare(b.user));
+  const link = (r: Rating) => (repo && r.issue ? `href="${esc(issueUrl(repo, r.issue))}" target="_blank" rel="noopener"` : "");
+  return `<section class="reviews">
+    ${said.length ? `<h2>Det siger kollegerne</h2>
     ${said.slice(0, 20).map((r) => `<div class="review"><div class="review-head">${"★".repeat(r.stars)}<i>${"★".repeat(STARS - r.stars)}</i>
-      <b>${esc(r.user)}</b><span class="muted small">${fmtDate(r.date)}</span></div><p>${esc(r.comment)}</p></div>`).join("")}</section>`;
+      <b>${esc(r.user)}</b><span class="muted small">${fmtDate(r.date)}</span></div><p>${esc(r.comment)}</p></div>`).join("")}` : ""}
+    <h3>Alle stemmer (${all.length})</h3>
+    <p class="voters">${all.map((r) => `<a ${link(r)}>${esc(r.user)} <span>${"★".repeat(r.stars)}</span></a>`).join("")}</p>
+    <p class="muted small">Alle stemmer er åbne: hver bedømmelse kan ses som et issue på GitHub. Kun godkendte kolleger kan stemme, én stemme pr. spil (den nyeste), og aldrig på egne spil.</p>
+  </section>`;
 }
 
 function playPage(g: Game) {
@@ -240,7 +248,8 @@ function playPage(g: Game) {
         <span class="spacer"></span>
         <button id="fullscreen" title="Fuld skærm">⛶ Fuld skærm</button>
       </div>
-      <iframe id="game-frame" src="${esc(src)}" title="${esc(g.title)}" allow="fullscreen; autoplay"></iframe>
+      <iframe id="game-frame" src="${esc(src)}" title="${esc(g.title)}" allow="fullscreen; autoplay"
+        ${g.url ? `sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"` : ""}></iframe>
     </div>`;
   document.getElementById("fullscreen")!.onclick = () => document.getElementById("game-frame")!.requestFullscreen?.();
 }

@@ -1,9 +1,8 @@
-// The competition lives in the repository's GitHub issues, so the platform needs no server:
-//   • a rating is an issue from the "Bedøm et spil" form (label "bedømmelse"),
-//   • a colleague's game is an issue from the "Tilføj dit spil" form (label "nyt-spil"); it is shown once
-//     Frederik has given it the label "godkendt".
-// The portal reads them with GitHub's public API (no login; 60 calls an hour per visitor, so the answer is
-// kept for a few minutes in the browser).
+// The competition's record: ledger.json on the repository's "data" branch. Only the referee workflow
+// (.github/workflows/konkurrence.yml) and Frederik write it – ratings checked when they were made (an allowed
+// voter, an old enough account, not their own game) and colleagues' games as they read when approved. The
+// portal never reads the issues themselves, so editing an issue, extra accounts or a hand-made issue count for
+// nothing here. What it reads is still treated as text from strangers: escaped, and addresses checked.
 
 export const STARS = 5;
 
@@ -13,7 +12,7 @@ export interface Rating {
   stars: number;
   comment: string;
   date: string;
-  url: string;
+  issue?: number;
 }
 
 export interface CommunityGame {
@@ -26,100 +25,65 @@ export interface CommunityGame {
   description: string;
   cover?: string;
   date: string;
-  issue: string;
-}
-
-interface Issue {
-  number: number;
-  html_url: string;
-  body: string | null;
-  created_at: string;
-  user: { login: string } | null;
-  labels: { name: string }[];
-  pull_request?: unknown;
-}
-
-const CACHE_KEY = "platform.github.v1";
-const CACHE_MS = 3 * 60 * 1000;
-
-/** The answers of an issue form: "### Label\n\nvalue" sections, by label. */
-function formFields(body: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const part of body.split(/^### /m).slice(1)) {
-    const nl = part.indexOf("\n");
-    const label = part.slice(0, nl).trim();
-    const value = part.slice(nl + 1).trim();
-    out[label] = value === "_No response_" ? "" : value;
-  }
-  return out;
-}
-
-const https = (u: string) => (/^https:\/\/[^\s"'<>]+$/i.test(u) ? u : "");
-
-async function fetchLabel(repo: string, label: string): Promise<Issue[]> {
-  const all: Issue[] = [];
-  for (let page = 1; page <= 10; page++) {
-    const res = await fetch(`https://api.github.com/repos/${repo}/issues?state=all&labels=${encodeURIComponent(label)}&per_page=100&page=${page}`, {
-      headers: { Accept: "application/vnd.github+json" },
-    });
-    if (!res.ok) throw new Error(`GitHub svarede ${res.status}`);
-    const batch = (await res.json()) as Issue[];
-    all.push(...batch.filter((i) => !i.pull_request));
-    if (batch.length < 100) break;
-  }
-  return all;
+  issue?: number;
 }
 
 export interface Community {
   ratings: Rating[];
   games: CommunityGame[];
-  /** Set when GitHub could not be reached: the page works on without ratings. */
+  /** Set when the record could not be fetched: the page works on without ratings. */
   error?: string;
+}
+
+const CACHE_KEY = "platform.ledger.v1";
+const CACHE_MS = 60 * 1000;
+
+const https = (u: unknown) => (typeof u === "string" && /^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[^\s"'<>]*)?$/.test(u) ? u : "");
+const str = (u: unknown, max: number) => (typeof u === "string" ? u.slice(0, max) : "");
+const slugOk = (u: unknown): u is string => typeof u === "string" && /^[a-z0-9][a-z0-9-]{0,40}$/.test(u);
+
+/** Keep only well-formed entries, whatever the file holds. */
+function sanitize(raw: unknown): Community {
+  const r = (raw ?? {}) as { ratings?: unknown[]; games?: unknown[] };
+  const ratings = (Array.isArray(r.ratings) ? r.ratings : []).flatMap((x): Rating[] => {
+    const v = x as Record<string, unknown>;
+    const stars = Number(v.stars);
+    if (!slugOk(v.game) || typeof v.user !== "string" || !Number.isInteger(stars) || stars < 1 || stars > STARS) return [];
+    return [{ game: v.game, user: str(v.user, 39), stars, comment: str(v.comment, 600), date: str(v.date, 40), issue: Number(v.issue) || undefined }];
+  });
+  const games = (Array.isArray(r.games) ? r.games : []).flatMap((x): CommunityGame[] => {
+    const v = x as Record<string, unknown>;
+    const dev = (v.developer ?? {}) as Record<string, unknown>;
+    const url = https(v.url);
+    if (!slugOk(v.slug) || !url || typeof v.title !== "string" || typeof dev.github !== "string") return [];
+    return [{
+      slug: v.slug, title: str(v.title, 60), url, type: str(v.type, 30) || "Andet",
+      developer: { name: str(dev.name, 60) || dev.github, github: str(dev.github, 39) },
+      tagline: str(v.tagline, 140), description: str(v.description, 2000), cover: https(v.cover) || undefined,
+      date: str(v.date, 40), issue: Number(v.issue) || undefined,
+    }];
+  });
+  return { ratings, games };
 }
 
 export async function loadCommunity(repo: string | undefined): Promise<Community> {
   if (!repo) return { ratings: [], games: [] };
   try {
     const hit = JSON.parse(sessionStorage.getItem(CACHE_KEY) ?? "null");
-    if (hit && hit.repo === repo && Date.now() - hit.at < CACHE_MS) return hit.data;
+    if (hit && hit.repo === repo && Date.now() - hit.at < CACHE_MS) return sanitize(hit.data);
   } catch {
     /* no cache */
   }
   try {
-    const [rated, submitted] = await Promise.all([fetchLabel(repo, "bedømmelse"), fetchLabel(repo, "godkendt")]);
-    const data: Community = {
-      ratings: rated.flatMap((i) => {
-        const f = formFields(i.body ?? "");
-        const stars = parseInt(f["Stjerner"] ?? "", 10);
-        const game = (f["Spil"] ?? "").trim().toLowerCase();
-        if (!i.user || !game || !(stars >= 1 && stars <= STARS)) return [];
-        return [{ game, user: i.user.login, stars, comment: f["Kommentar"] ?? "", date: i.created_at, url: i.html_url }];
-      }),
-      games: submitted.flatMap((i) => {
-        if (!i.labels.some((l) => l.name === "nyt-spil") || !i.user) return [];
-        const f = formFields(i.body ?? "");
-        const url = https(f["Adresse"] ?? "");
-        if (!url || !f["Titel"]) return [];
-        return [{
-          slug: `c${i.number}`,
-          title: f["Titel"],
-          developer: { name: f["Udvikler"] || i.user.login, github: i.user.login },
-          type: f["Type"] || "Andet",
-          url,
-          tagline: f["Kort beskrivelse"] ?? "",
-          description: f["Beskrivelse"] ?? "",
-          cover: https(f["Coverbillede"] ?? "") || undefined,
-          date: i.created_at,
-          issue: i.html_url,
-        }];
-      }),
-    };
+    const res = await fetch(`https://raw.githubusercontent.com/${repo}/data/ledger.json?t=${Math.floor(Date.now() / CACHE_MS)}`, { cache: "no-cache" });
+    if (!res.ok) throw new Error(`GitHub svarede ${res.status}`);
+    const data = await res.json();
     try {
       sessionStorage.setItem(CACHE_KEY, JSON.stringify({ repo, at: Date.now(), data }));
     } catch {
       /* fine */
     }
-    return data;
+    return sanitize(data);
   } catch (e) {
     return { ratings: [], games: [], error: (e as Error).message };
   }
@@ -129,3 +93,4 @@ export async function loadCommunity(repo: string | undefined): Promise<Community
 export const rateUrl = (repo: string, slug: string, title: string) =>
   `https://github.com/${repo}/issues/new?template=bedoem.yml&spil=${encodeURIComponent(slug)}&title=${encodeURIComponent(`Bedømmelse: ${title}`)}`;
 export const submitUrl = (repo: string) => `https://github.com/${repo}/issues/new?template=nyt-spil.yml`;
+export const issueUrl = (repo: string, n: number) => `https://github.com/${repo}/issues/${n}`;

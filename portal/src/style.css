@@ -136,3 +136,7 @@ nav a.on { color: var(--text); }
 .board a { text-decoration: none; font-weight: 600; }
 .board a:hover { color: var(--accent); }
 .board .stars.small { display: inline; margin: 0; }
+.reviews h3 { font-size: 15px; margin: 22px 0 8px; color: var(--muted); }
+.voters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.voters a { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); text-decoration: none; }
+.voters a span { color: var(--accent); }
