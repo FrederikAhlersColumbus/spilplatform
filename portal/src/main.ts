@@ -385,9 +385,14 @@ function guidePage() {
 type GC = { count: (o: { path: string; title?: string; event?: boolean }) => void };
 function track(path: string, title?: string, event = false) {
   if (devMode) return; // your own testing on Dev does not count
-  const send = () => (window as unknown as { goatcounter?: GC }).goatcounter?.count({ path, title, event });
-  if ((window as unknown as { goatcounter?: GC }).goatcounter?.count) send();
-  else setTimeout(send, 1500); // the script loads async
+  // the script loads async: retry for a while, so the first page of a visit is counted too
+  let tries = 0;
+  const send = () => {
+    const gc = (window as unknown as { goatcounter?: GC }).goatcounter;
+    if (gc?.count) gc.count({ path, title, event });
+    else if (++tries < 40) setTimeout(send, 250);
+  };
+  send();
 }
 
 function route() {
