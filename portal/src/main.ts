@@ -267,6 +267,7 @@ function playPage(g: Game) {
   if (!v) return gamePage(g);
   const src = g.url ?? `games/${g.slug}/${encodeURIComponent(v)}/index.html?channel=${ch}`;
   document.body.classList.add("playing");
+  track(`start/${g.slug}`, `Start: ${g.title}`, true);
   app.innerHTML = `
     <div class="player">
       <div class="player-bar">
@@ -379,6 +380,16 @@ function guidePage() {
 
 // ---- Routing (hash based, so it works on GitHub Pages without server rules) -------------
 
+// ---- Visitor counts (GoatCounter, no cookies) ------------------------------------------------------
+// The portal uses #-addresses, so each page is counted by hand; starting a game is counted as an event.
+type GC = { count: (o: { path: string; title?: string; event?: boolean }) => void };
+function track(path: string, title?: string, event = false) {
+  if (devMode) return; // your own testing on Dev does not count
+  const send = () => (window as unknown as { goatcounter?: GC }).goatcounter?.count({ path, title, event });
+  if ((window as unknown as { goatcounter?: GC }).goatcounter?.count) send();
+  else setTimeout(send, 1500); // the script loads async
+}
+
 function route() {
   document.body.classList.remove("playing");
   const [path, query = ""] = location.hash.replace(/^#\/?/, "").split("?");
@@ -389,6 +400,7 @@ function route() {
     if (dev !== null) view.dev = dev;
     return catalogPage();
   }
+  track(`/${path}`);
   if (parts[0] === "topliste") return leaderboardPage();
   if (parts[0] === "guide") return guidePage();
   if (parts[0] === "spil" && parts[1]) {
