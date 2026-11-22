@@ -15,6 +15,21 @@
       "cover": "https://msvante.github.io/apps/covers/lineup_guesser.svg",
       "date": "2026-11-22T06:23:43Z",
       "issue": 4
+    },
+    {
+      "slug": "c5",
+      "title": "Headline Hangman",
+      "url": "https://msvante.github.io/apps/hangman/",
+      "developer": {
+        "name": "MSvante",
+        "github": "MSvante"
+      },
+      "type": "Puslespil",
+      "tagline": "Hængerleg med dagens nyhedsoverskrifter – gæt det skjulte ord bogstav for bogstav.",
+      "description": "Spillet henter friske nyhedsoverskrifter, og ét ord i hver overskrift er skjult. Gæt bogstaverne med tastaturet eller skærmen. Fem forkerte gæt, og overskriften er tabt. Du har tre hints pr. runde, som afslører et bogstav. Overskrifterne er på engelsk.",
+      "cover": "https://msvante.github.io/apps/covers/hangman.svg",
+      "date": "2026-11-22T06:24:43Z",
+      "issue": 5
     }
   ]
 }
