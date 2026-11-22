@@ -60,6 +60,21 @@
       "cover": "https://msvante.github.io/apps/covers/pokemon.svg",
       "date": "2026-11-22T06:25:38Z",
       "issue": 7
+    },
+    {
+      "slug": "c9",
+      "title": "Gloamvale",
+      "url": "https://new-game-nu-red.vercel.app/",
+      "developer": {
+        "name": "MSvante",
+        "github": "MSvante"
+      },
+      "type": "Eventyr",
+      "tagline": "Fang, træn og kæmp med ferals i et Game Boy-inspireret eventyr gennem Bramblemark",
+      "description": "Et rollespil i klassisk Game Boy-stil med fire grønne nuancer. Vælg din første feral, udforsk Bramblemark, fang vilde ferals med Snare Orbs og byg dit hold. Slå de otte Trial Keepers for deres Warden's Marks, mød din rival Wren undervejs, og udfordr til sidst de High Wardens. Over 70 ferals, fire legendariske skabninger, hemmelige stier, is-gåder, båd over søerne og indhold efter mesterskabet. Spillet gemmer i browseren.\n\nStyring (tastatur): piletaster eller WASD = gå. Z, Enter eller mellemrum = A (vælg/tal). X eller Backspace = B (tilbage; hold B for at løbe). Esc eller Shift = START (menu). På mobil vises knapper på skærmen.\n\nKlik i spillet først, så det får tastaturet.",
+      "cover": "https://new-game-nu-red.vercel.app/cover.png",
+      "date": "2026-11-22T06:37:52Z",
+      "issue": 9
     }
   ]
 }
