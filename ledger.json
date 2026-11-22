@@ -30,6 +30,21 @@
       "cover": "https://msvante.github.io/apps/covers/hangman.svg",
       "date": "2026-11-22T06:24:43Z",
       "issue": 5
+    },
+    {
+      "slug": "c6",
+      "title": "Daily Calendar Puzzle",
+      "url": "https://msvante.github.io/apps/kalender/",
+      "developer": {
+        "name": "MSvante",
+        "github": "MSvante"
+      },
+      "type": "Puslespil",
+      "tagline": "Læg brikkerne på kalenderen, så kun dagens måned og dato er fri. Ny opgave hver dag.",
+      "description": "En kalender med alle måneder og datoer og otte brikker. Drej og spejlvend brikkerne, og læg dem, så de dækker alle felter undtagen dagens måned og dato.",
+      "cover": "https://msvante.github.io/apps/covers/kalender.svg",
+      "date": "2026-11-22T06:25:10Z",
+      "issue": 6
     }
   ]
 }
