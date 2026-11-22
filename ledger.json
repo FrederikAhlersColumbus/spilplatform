@@ -1,4 +1,20 @@
 {
   "ratings": [],
-  "games": []
+  "games": [
+    {
+      "slug": "c4",
+      "title": "PL Lineup Guesser",
+      "url": "https://msvante.github.io/apps/lineup_guesser/",
+      "developer": {
+        "name": "MSvante",
+        "github": "MSvante"
+      },
+      "type": "Sport",
+      "tagline": "Gæt startopstillingen fra en tilfældig Premier League-kamp siden 2010.",
+      "description": "Du får en tilfældig Premier League-kamp fra 2010 til i dag og skal gætte alle 11 spillere i det ene holds startopstilling. Skriv et navn – efternavn er nok. Hver rigtig spiller giver 10 point. Sidder du fast, kan du købe hints: nationalitet, alder, trøjenummer og forbogstav. Du kan filtrere på hold og årstal. Spillet er på engelsk.",
+      "cover": "https://msvante.github.io/apps/covers/lineup_guesser.svg",
+      "date": "2026-11-22T06:23:43Z",
+      "issue": 4
+    }
+  ]
 }
