@@ -45,6 +45,21 @@
       "cover": "https://msvante.github.io/apps/covers/kalender.svg",
       "date": "2026-11-22T06:25:10Z",
       "issue": 6
+    },
+    {
+      "slug": "c7",
+      "title": "Who's That Pokémon?",
+      "url": "https://msvante.github.io/apps/pokemon/",
+      "developer": {
+        "name": "MSvante",
+        "github": "MSvante"
+      },
+      "type": "Puslespil",
+      "tagline": "Gæt Pokémonen ud fra dens silhuet. Hvor lang en stime kan du holde?",
+      "description": "Du ser silhuetten af en Pokémon og vælger det rigtige navn blandt fire svar. Svarmulighederne er drilske, for de kommer ofte fra samme udviklingskæde. Hints (type eller delvis afsløring) koster point. Vælg generation, hold stimen i live, og slå din egen rekord.",
+      "cover": "https://msvante.github.io/apps/covers/pokemon.svg",
+      "date": "2026-11-22T06:25:38Z",
+      "issue": 7
     }
   ]
 }
